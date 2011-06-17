@@ -1,0 +1,5 @@
+chroot to run tvheadend into debian:
+
+TODO on install on new synology before run ( prehaps with postinst script of spk )
+cp /etc/resolv.conf chroottarget/etc/
+echo <YourHostname> > chroottarget/etc/hostname
