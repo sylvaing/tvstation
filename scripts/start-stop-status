@@ -1,0 +1,120 @@
+#!/bin/sh
+
+TV_MODULES="i2c-core dvb-core dvb-usb tda18218 af9013 dvb-usb-af9015"
+CHROOT_TARGET="/volume1/debian/chroottarget"
+ROOT_MODULE_PATH="/usr/syno/synoman/webman/3rdparty/tvstation/modules"
+
+
+SYNOLoadModule()
+{
+  LinuxVersion=`/bin/uname -r | /usr/bin/cut -d'.' -f1-2`
+  if [ "x${LinuxVersion}" != "x2.6" ]; then
+    MODULE_SUFFIX="o"
+  else
+    MODULE_SUFFIX="ko"
+  fi
+
+  for MODULE in $*
+  do
+    MODULE_PATH=${ROOT_MODULE_PATH}/${MODULE}.${MODULE_SUFFIX}
+    if [ -f ${MODULE_PATH} ]; then
+      echo "Load ${MODULE}... "
+
+      INSMOD_CNT=0
+      while [ 5 -gt $INSMOD_CNT ]
+      do
+        /sbin/insmod ${MODULE_PATH} > /dev/null 2>&1
+        /bin/grep "^${MODULE//-/_} " /proc/modules >/dev/null
+        if [ $? -eq 0 ]; then
+          break;
+        fi
+        sleep 1
+        INSMOD_CNT=`expr $INSMOD_CNT + 1`
+      done
+    fi
+  done
+}
+
+
+SYNORmModule()
+{
+  MODULELIST=""
+
+  for MODULE in $*
+  do
+    MODULELIST="$MODULE $MODULELIST"
+  done
+
+  for MODULE in $MODULELIST
+  do
+    RMMOD_CNT=0
+    while [ 5 -gt $RMMOD_CNT ]
+    do
+      /sbin/rmmod ${MODULE} > /dev/null 2>&1
+      /bin/grep "^${MODULE//-/_} " /proc/modules >/dev/null
+      if [ $? -ne 0 ]; then
+        break;
+      fi
+      sleep 1
+      RMMOD_CNT=`expr $RMMOD_CNT + 1`
+    done
+  done
+}
+
+
+start()
+{
+  SYNOLoadModule ${TV_MODULES}
+
+  #mount some path for root environment
+  mount -o bind /proc ${CHROOT_TARGET}/proc
+  mount -o bind /proc/bus/usb ${CHROOT_TARGET}/proc/bus/usb
+  mount -o bind /dev ${CHROOT_TARGET}/dev
+  mount -o bind /sys ${CHROOT_TARGET}/sys
+
+  #mount home record directory to export out of chroot
+  if [ ! -d /volume1/video/TV ]; then
+    mkdir -p /volume1/video/TV
+  fi
+  mount -o bind ${CHROOT_TARGET}/home/hts /volume1/video/TV
+
+  #lauch application inside chroot
+  chroot ${CHROOT_TARGET} /root/start_tv.sh
+
+}
+
+
+stop()
+{
+  #lauch application inside chroot
+  chroot ${CHROOT_TARGET} /root/stop_tv.sh
+  
+  umount  ${CHROOT_TARGET}/proc
+  umount  ${CHROOT_TARGET}/proc/bus/usb
+  umount  ${CHROOT_TARGET}/dev
+  umount  ${CHROOT_TARGET}/sys
+
+  umount /volume1/video/TV
+
+  SYNOLoadModule ${TV_MODULES}
+}
+
+
+
+case $1 in
+  start)
+    start
+    exit 0
+    ;;
+  stop)
+    stop
+    exit 0
+    ;;
+  status)
+      exit 1                                                                           
+    ;;
+  log)
+    exit 0
+    ;;
+esac
+

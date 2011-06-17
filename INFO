@@ -1,0 +1,6 @@
+package="TVstation"
+displayname="TV station"
+version="0.1"
+maintainer="Sylvain Garcia"
+description="Run Tv station on your synology."
+arch="88f6281"

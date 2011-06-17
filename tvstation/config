@@ -1,0 +1,12 @@
+{
+  ".url":{
+    "org.isynet.tvstation": {
+      "type":"legacy",
+      "allUsers": true,
+      "title": "TV Station",
+      "desc": "Tv station with Tvheadend",
+      "icon": "images/icon_{0}.png",
+      "url": "http://tv.isynet.org"
+     }
+  }
+}
